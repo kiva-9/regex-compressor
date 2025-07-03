@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>路径正则表达式生成器</title>
+  <style>
+    body { font-family: sans-serif; max-width: 800px; margin: 40px; }
+    textarea { width: 100%; height: 200px; font-family: monospace; margin-bottom: 1em; }
+    pre { background: #f4f4f4; padding: 10px; white-space: pre-wrap; word-break: break-word; }
+    .btn { padding: 10px 20px; font-size: 16px; }
+  </style>
+</head>
+<body>
+
+  <h1>路径型正则表达式生成器</h1>
+  <p>粘贴完整 URL，每行一个，工具将提取相同域名并列出不同路径：</p>
+
+  <textarea id="urlInput" placeholder="https://www.jackery.com/blogs/lifestyle/page-a\nhttps://www.jackery.com/blogs/knowledge/page-b"></textarea>
+  <button class="btn" onclick="generateRegex()">生成正则表达式</button>
+
+  <h2>生成的正则表达式</h2>
+  <pre id="regexOutput">(等待生成...)</pre>
+
+  <script>
+    function escapeRegex(str) {
+      return str.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+    }
+
+    function generateRegex() {
+      const input = document.getElementById('urlInput').value.trim();
+      const urls = input.split('\n').map(line => line.trim()).filter(Boolean);
+      if (urls.length === 0) {
+        document.getElementById('regexOutput').textContent = '请输入至少一个 URL';
+        return;
+      }
+
+      // 提取共同前缀（域名）
+      const urlObj = new URL(urls[0]);
+      const base = urlObj.origin + '/';
+      const escapedBase = escapeRegex(base);
+
+      const paths = urls.map(url => {
+        try {
+          const u = new URL(url);
+          return escapeRegex(u.pathname.replace(/^\/+/, ''));
+        } catch (e) {
+          return null;
+        }
+      }).filter(Boolean);
+
+      const regex = `^${escapedBase}(${paths.join('|')})$`;
+      document.getElementById('regexOutput').textContent = regex;
+    }
+  </script>
+
+</body>
+</html>

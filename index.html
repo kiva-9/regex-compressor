@@ -4,8 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Web路径处理工具集</title>
+    
+    <link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzRhNTU2OCI+PHBhdGggZD0iTTEyIDJBNCA0IDAgMCAwIDggNkg1djJIONEgdi0ySDJ2NmgydjJINGV2MmgxLjA5OGMuNDQyIDMuMzkgMy41IDYgNi45MDIgNnM2LjQ2LTIuNjEgNi45MDItNkgyMHYtMmgxdi0ySDIwVjhoLTNBNCA0IDAgMCAwIDEyIDJ6bTAgMmMxLjEgMCAyIC45IDIgMnMtLjkgMi0yIDJzLTItLjktMi0yIC45LTIgMi0yem0tMSAxMi43NjVWMTVIMTJWOWgtMXY3aC4yMjRDMTAuNDQgMTcuMTkgMTEuMzMgMTggMTIgMThzMS41Ni0uODEgMS43NzYtMkgxNFY5aC0xdjZoLjc2NEMxMy4zMyAxNi4wMyAxMy4wNCAxNyAxMiAxN3MtMS4zMy0uOTctMS43NjUtMkgyek0xNyA4djZoMVY4aC0xem0tMyAwaDF2NmgxVjhoLTJ6Ij48L3BhdGg+PC9zdmc+">
+    
     <style>
-        /* CSS 样式 (已合并) */
+        /* CSS 样式 (无变化) */
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
             line-height: 1.6;
@@ -16,7 +19,7 @@
         }
         .container {
             max-width: 1200px;
-            margin: 0 auto 40px auto; /* 在容器底部增加外边距 */
+            margin: 0 auto 40px auto;
             background: #fff;
             padding: 25px;
             border-radius: 8px;
@@ -38,7 +41,7 @@
             border: 1px solid #ccc;
             border-radius: 4px;
             font-size: 14px;
-            font-family: monospace; /* 统一使用等宽字体 */
+            font-family: monospace;
             box-sizing: border-box;
             margin-bottom: 1em;
         }
@@ -46,7 +49,7 @@
             background: #f4f4f4;
             padding: 15px;
             white-space: pre-wrap;
-            word-break: break-all; /* 修改为break-all以适应长正则 */
+            word-break: break-all;
             border-radius: 4px;
             border: 1px solid #e0e0e0;
         }
@@ -76,20 +79,20 @@
         }
         /* --- 按钮样式 --- */
         #regex-gen-btn {
-            background-color: #5e35b1; /* 紫色系 */
+            background-color: #5e35b1;
         }
         #regex-gen-btn:hover {
             background-color: #4527a0;
         }
         #process-btn {
-            background-color: #1a73e8; /* 蓝色系 */
+            background-color: #1a73e8;
         }
         #process-btn:hover {
             background-color: #1558b8;
         }
         #copy-btn {
-            background-color: #28a745; /* 绿色系 */
-            display: none; /* 初始隐藏 */
+            background-color: #28a745;
+            display: none;
         }
         #copy-btn:hover {
             background-color: #218838;
@@ -142,19 +145,19 @@
         <h2>工具二：URL点击量匹配工具</h2>
         <div class="input-container">
             <div class="input-box">
-                <h3>1. 粘贴URL列表1 (保持此顺序)</h3>
+                <h3>1. 粘贴URL列表1 (保持此顺序，通常从文章数据表粘贴)</h3>
                 <p>每行一个URL，点击量列可为空。</p>
                 <textarea id="list1" rows="12" placeholder="示例:&#10;https://example.com/pageA&#10;https://example.com/pageB&#10;https://example.com/pageC"></textarea>
             </div>
             <div class="input-box">
-                <h3>2. 粘贴URL列表2 (带点击量)</h3>
+                <h3>2. 粘贴URL列表2 (带点击量，通常从GSC导出数据粘贴)</h3>
                 <p>从Excel或表格复制，第一列是URL，第二列是点击量。</p>
                 <textarea id="list2" rows="12" placeholder="示例:&#10;https://example.com/pageC	985&#10;https://example.com/pageA	1230&#10;https://example.com/pageB	456"></textarea>
             </div>
         </div>
         <div class="controls">
             <button id="process-btn">开始匹配</button>
-            <button id="copy-btn">复制结果 (TSV)</button>
+            <button id="copy-btn">仅复制点击量</button>
         </div>
         <div class="result-container">
             <h3>3. 匹配结果</h3>
@@ -165,7 +168,7 @@
     </div>
 
     <script>
-        // --- 脚本1: 正则表达式生成器 ---
+        // --- 脚本1: 正则表达式生成器 (无变化) ---
         function escapeRegex(str) {
             return str.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
         }
@@ -179,19 +182,16 @@
             }
             
             try {
-                // 提取共同前缀（域名+协议）
                 const urlObj = new URL(urls[0]);
-                const base = urlObj.origin; // e.g., "https://www.example.com"
+                const base = urlObj.origin; 
                 
                 const paths = urls.map(url => {
                     try {
                         const u = new URL(url);
                         if (u.origin !== base) {
-                           // 如果遇到不同域名，可以抛出错误或忽略
                            console.warn(`URL ${url} 的域名与第一个URL不符，已忽略。`);
                            return null;
                         }
-                        // 移除开头和结尾的斜杠，然后转义
                         return escapeRegex(u.pathname.replace(/^\/|\/$/g, ''));
                     } catch (e) {
                         return null;
@@ -211,7 +211,7 @@
             }
         }
 
-        // --- 脚本2: URL点击量匹配工具 ---
+        // --- 脚本2: URL点击量匹配工具 (无变化) ---
         document.getElementById('process-btn').addEventListener('click', () => {
             const list1Text = document.getElementById('list1').value.trim();
             const list2Text = document.getElementById('list2').value.trim();
@@ -301,14 +301,16 @@
             const table = document.getElementById('result-table');
             if (!table) return;
 
-            let tsvContent = '';
+            const clicksColumn = [];
             for (let i = 1; i < table.rows.length; i++) {
                 const row = table.rows[i];
-                const rowData = [row.cells[0].innerText, row.cells[1].innerText];
-                tsvContent += rowData.join('\t') + '\n';
+                const clickCount = row.cells[1].innerText;
+                clicksColumn.push(clickCount);
             }
             
-            navigator.clipboard.writeText(tsvContent).then(() => {
+            const clicksContent = clicksColumn.join('\n');
+
+            navigator.clipboard.writeText(clicksContent).then(() => {
                 const copyBtn = document.getElementById('copy-btn');
                 const originalText = copyBtn.innerText;
                 copyBtn.innerText = '复制成功!';

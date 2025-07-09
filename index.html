@@ -3,10 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Web路径处理工具集</title>
-    
-    <link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzRhNTU2OCI+PHBhdGggZD0iTTEyIDJBNCA0IDAgMCAwIDggNkg1djJIONEgdi0ySDJ2NmgydjJINGV2MmgxLjA5OGMuNDQyIDMuMzkgMy41IDYgNi45MDIgNnM2LjQ2LTIuNjEgNi45MDItNkgyMHYtMmgxdi0ySDIwVjhoLTNBNCA0IDAgMCAwIDEyIDJ6bTAgMmMxLjEgMCAyIC45IDIgMnMtLjkgMi0yIDJzLTItLjktMi0yIC45LTIgMi0yem0tMSAxMi43NjVWMTVIMTJWOWgtMXY3aC4yMjRDMTAuNDQgMTcuMTkgMTEuMzMgMTggMTIgMThzMS41Ni0uODEgMS43NzYtMkgxNFY5aC0xdjZoLjc2NEMxMy4zMyAxNi4wMyAxMy4wNCAxNyAxMiAxN3MtMS4zMy0uOTctMS43NjUtMkgyek0xNyA4djZoMVY4aC0xem0tMyAwaDF2NmgxVjhoLTJ6Ij48L3BhdGg+PC9zdmc+">
-    
+    <title>Web路径与数据处理工具集</title>
     <style>
         /* CSS 样式 (无变化) */
         body {
@@ -34,6 +31,9 @@
             color: #1a73e8;
             border-bottom: 2px solid #e0e0e0;
             padding-bottom: 10px;
+        }
+        h3 {
+            margin-top: 0;
         }
         textarea {
             width: 100%;
@@ -77,30 +77,16 @@
             gap: 15px;
             margin: 25px 0;
         }
-        /* --- 按钮样式 --- */
-        #regex-gen-btn {
-            background-color: #5e35b1;
-        }
-        #regex-gen-btn:hover {
-            background-color: #4527a0;
-        }
-        #process-btn {
-            background-color: #1a73e8;
-        }
-        #process-btn:hover {
-            background-color: #1558b8;
-        }
+        #regex-gen-btn { background-color: #5e35b1; }
+        #regex-gen-btn:hover { background-color: #4527a0; }
+        #process-btn { background-color: #1a73e8; }
+        #process-btn:hover { background-color: #1558b8; }
         #copy-btn {
             background-color: #28a745;
             display: none;
         }
-        #copy-btn:hover {
-            background-color: #218838;
-        }
-        /* --- 结果区域 --- */
-        .result-container {
-            margin-top: 20px;
-        }
+        #copy-btn:hover { background-color: #218838; }
+        .result-container { margin-top: 20px; }
         #result-table {
             width: 100%;
             border-collapse: collapse;
@@ -114,10 +100,13 @@
         #result-table th {
             background-color: #f2f2f2;
             font-weight: bold;
+            position: relative;
         }
-        #result-table tr:nth-child(even) {
-            background-color: #f9f9f9;
+        #result-table th input[type="checkbox"] {
+            margin-right: 8px;
+            vertical-align: middle;
         }
+        #result-table tr:nth-child(even) { background-color: #f9f9f9; }
         .status-message {
             text-align: center;
             font-style: italic;
@@ -128,11 +117,11 @@
 </head>
 <body>
 
-    <h1>Web路径处理工具集</h1>
+    <h1>Web路径与数据处理工具集</h1>
 
     <div class="container">
         <h2>工具一：路径正则表达式生成器</h2>
-        <p>粘贴完整 URL (每行一个)，工具将提取相同域名并生成匹配这些路径的正则表达式。</p>
+        <p>粘贴URL列表 (每行一个)，工具将提取相同域名并生成匹配这些路径的正则表达式。</p>
         <textarea id="urlInput" rows="10" placeholder="https://www.example.com/blogs/lifestyle/page-a&#10;https://www.example.com/blogs/knowledge/page-b"></textarea>
         <div style="text-align: center;">
             <button id="regex-gen-btn" onclick="generateRegex()">生成正则表达式</button>
@@ -142,187 +131,209 @@
     </div>
 
     <div class="container">
-        <h2>工具二：URL点击量匹配工具</h2>
+        <h2>工具二：URL数据匹配与导出工具</h2>
         <div class="input-container">
             <div class="input-box">
-                <h3>1. 粘贴URL列表1 (保持此顺序，通常从文章数据表粘贴)</h3>
-                <p>每行一个URL，点击量列可为空。</p>
-                <textarea id="list1" rows="12" placeholder="示例:&#10;https://example.com/pageA&#10;https://example.com/pageB&#10;https://example.com/pageC"></textarea>
+                <h3>1. 粘贴URL列表1 (保持此顺序)</h3>
+                <p>URL或者URL Slug列表，用于匹配顺序，通常从您的文章数据表粘贴过来。</p>
+                <textarea id="list1" rows="12" placeholder="示例:&#10;https://example.com/page-1&#10;/page-1&#10;"></textarea>
             </div>
             <div class="input-box">
-                <h3>2. 粘贴URL列表2 (带点击量，通常从GSC导出数据粘贴)</h3>
-                <p>从Excel或表格复制，第一列是URL，第二列是点击量。</p>
-                <textarea id="list2" rows="12" placeholder="示例:&#10;https://example.com/pageC	985&#10;https://example.com/pageA	1230&#10;https://example.com/pageB	456"></textarea>
+                <h3>2. 粘贴GSC/GA数据 (列表2)</h3>
+                <p>从GSC或GA导出的表格复制的多列数据，第一列必须是URL或者URL Slug。</p>
+                <textarea id="list2" rows="12" placeholder="示例:(不要粘贴表头)&#10;https://example.com/page-1	数据A	数据B&#10;/page-1	数据C	数据D	数据E&#10;"></textarea>
             </div>
         </div>
         <div class="controls">
             <button id="process-btn">开始匹配</button>
-            <button id="copy-btn">仅复制点击量</button>
+            <button id="copy-btn">复制所选列 (TSV)</button>
         </div>
         <div class="result-container">
             <h3>3. 匹配结果</h3>
             <div id="output">
-                <p class="status-message">结果将在这里显示。</p>
+                <p class="status-message">结果将在这里显示。您可以在表头勾选需要复制的列。</p>
             </div>
         </div>
     </div>
 
     <script>
-        // --- 脚本1: 正则表达式生成器 (无变化) ---
-        function escapeRegex(str) {
-            return str.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+    // --- 脚本1: 正则表达式生成器 (无变化) ---
+    function escapeRegex(str) {
+      return str.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+    }
+    function generateRegex() {
+      const input = document.getElementById('urlInput').value.trim();
+      const urls = input.split('\n').map(line => line.trim()).filter(Boolean);
+      if (urls.length === 0) {
+        document.getElementById('regexOutput').textContent = '请输入至少一个 URL';
+        return;
+      }
+      try {
+        const urlObj = new URL(urls[0]);
+        const base = urlObj.origin;
+        const paths = urls.map(url => {
+          try {
+            const u = new URL(url);
+            if (u.origin !== base) {
+              console.warn(`URL ${url} 的域名与第一个URL不符，已忽略。`);
+              return null;
+            }
+            return escapeRegex(u.pathname.replace(/^\/|\/$/g, ''));
+          } catch (e) { return null; }
+        }).filter(Boolean);
+        if (paths.length === 0) {
+          document.getElementById('regexOutput').textContent = '未能提取到有效的路径。';
+          return;
+        }
+        const regex = `^${escapeRegex(base)}\/(${paths.join('|')})\/?$`;
+        document.getElementById('regexOutput').textContent = regex;
+      } catch (e) {
+        document.getElementById('regexOutput').textContent = '错误：请输入有效的URL。第一个URL格式不正确。';
+      }
+    }
+
+    // --- 脚本2: 通用数据匹配工具 (已升级为动态列) ---
+    document.getElementById('process-btn').addEventListener('click', () => {
+        const list1Text = document.getElementById('list1').value.trim();
+        const list2Text = document.getElementById('list2').value.trim();
+
+        if (!list1Text || !list2Text) {
+            document.getElementById('output').innerHTML = '<p class="status-message" style="color: red;">错误：两个列表都必须填写内容。</p>';
+            return;
         }
 
-        function generateRegex() {
-            const input = document.getElementById('urlInput').value.trim();
-            const urls = input.split('\n').map(line => line.trim()).filter(Boolean);
-            if (urls.length === 0) {
-                document.getElementById('regexOutput').textContent = '请输入至少一个 URL';
-                return;
-            }
+        // 1. 解析列表2，创建 ID 到数据数组的映射
+        const dataMap = new Map();
+        const list2Lines = list2Text.split('\n');
+        let maxCols = 0; // 用于记录数据部分的最大列数
+        
+        list2Lines.forEach(line => {
+            if (line.trim() === '') return;
+            // 严格使用制表符(Tab)进行分割
+            const parts = line.split('\t').map(p => p.trim());
             
-            try {
-                const urlObj = new URL(urls[0]);
-                const base = urlObj.origin; 
-                
-                const paths = urls.map(url => {
-                    try {
-                        const u = new URL(url);
-                        if (u.origin !== base) {
-                           console.warn(`URL ${url} 的域名与第一个URL不符，已忽略。`);
-                           return null;
-                        }
-                        return escapeRegex(u.pathname.replace(/^\/|\/$/g, ''));
-                    } catch (e) {
-                        return null;
-                    }
-                }).filter(Boolean);
+            if (parts.length === 0 || !parts[0]) return; // 跳过空行或无效行
 
-                if (paths.length === 0) {
-                    document.getElementById('regexOutput').textContent = '未能提取到有效的路径。';
-                    return;
-                }
-
-                const regex = `^${escapeRegex(base)}\/(${paths.join('|')})\/?$`;
-                document.getElementById('regexOutput').textContent = regex;
-                
-            } catch (e) {
-                document.getElementById('regexOutput').textContent = '错误：请输入有效的URL。第一个URL格式不正确。';
-            }
-        }
-
-        // --- 脚本2: URL点击量匹配工具 (无变化) ---
-        document.getElementById('process-btn').addEventListener('click', () => {
-            const list1Text = document.getElementById('list1').value.trim();
-            const list2Text = document.getElementById('list2').value.trim();
-
-            if (!list1Text || !list2Text) {
-                document.getElementById('output').innerHTML = '<p class="status-message" style="color: red;">错误：两个列表都必须填写内容。</p>';
-                return;
-            }
-
-            const clicksMap = new Map();
-            const list2Lines = list2Text.split('\n');
+            const identifier = parts.shift(); // 取出第一项作为ID
+            dataMap.set(identifier, parts); // 剩下的部分作为数据数组存入Map
             
-            list2Lines.forEach(line => {
-                if (line.trim() === '') return;
-                const parts = line.split(/\s+/);
-                if (parts.length >= 2) {
-                    const url = parts[0].trim();
-                    const clicks = parts[parts.length - 1].trim();
-                    if (url) {
-                       clicksMap.set(url, clicks);
-                    }
-                }
-            });
-
-            const results = [];
-            const list1Lines = list1Text.split('\n');
-            let notFoundCount = 0;
-
-            list1Lines.forEach(line => {
-                if (line.trim() === '') return;
-                const url = line.split(/\s+/)[0].trim();
-                if (url) {
-                    const clicks = clicksMap.get(url);
-                    if (clicks !== undefined) {
-                        results.push({ url: url, clicks: clicks });
-                    } else {
-                        results.push({ url: url, clicks: '未找到' });
-                        notFoundCount++;
-                    }
-                }
-            });
-
-            renderTable(results, notFoundCount);
-            
-            if(results.length > 0) {
-                document.getElementById('copy-btn').style.display = 'inline-block';
-            } else {
-                document.getElementById('copy-btn').style.display = 'none';
+            // 更新最大列数
+            if (parts.length > maxCols) {
+                maxCols = parts.length;
             }
         });
 
-        function renderTable(data, notFoundCount) {
-            const outputDiv = document.getElementById('output');
-            if (data.length === 0) {
-                outputDiv.innerHTML = '<p class="status-message">未能处理任何数据，请检查输入格式。</p>';
-                return;
+        // 2. 解析列表1，并根据映射查找数据
+        const results = [];
+        let notFoundCount = 0;
+        const list1Lines = list1Text.split('\n');
+
+        list1Lines.forEach(line => {
+            const identifier = line.trim();
+            if (identifier) {
+                const dataArray = dataMap.get(identifier);
+                if (dataArray) {
+                    results.push({ id: identifier, data: dataArray });
+                } else {
+                    notFoundCount++;
+                    results.push({ id: identifier, data: [] }); // 未找到时，数据为空数组
+                }
             }
+        });
 
-            let tableHTML = `
-                <p class="status-message">
-                    处理完成！共处理 <strong>${data.length}</strong> 条URL，其中 <strong>${notFoundCount}</strong> 条未在列表2中找到匹配项。
-                </p>
-                <table id="result-table">
-                    <thead>
-                        <tr>
-                            <th>URL (顺序来自列表1)</th>
-                            <th>匹配到的点击量</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-            `;
+        // 3. 生成并显示动态列数的表格
+        renderTable(results, notFoundCount, maxCols);
+        
+        if (results.length > 0) {
+            document.getElementById('copy-btn').style.display = 'inline-block';
+        } else {
+            document.getElementById('copy-btn').style.display = 'none';
+        }
+    });
 
-            data.forEach(item => {
-                tableHTML += `
+    function renderTable(data, notFoundCount, numDataCols) {
+        const outputDiv = document.getElementById('output');
+        if (data.length === 0) {
+            outputDiv.innerHTML = '<p class="status-message">未能处理任何数据，请检查输入格式。</p>';
+            return;
+        }
+
+        // 动态生成表头
+        const headers = ['项目/ID'];
+        for (let i = 1; i <= numDataCols; i++) {
+            headers.push(`数据列 ${i}`);
+        }
+
+        let tableHTML = `
+            <p class="status-message">
+                处理完成！共处理 <strong>${data.length}</strong> 个项目，其中 <strong>${notFoundCount}</strong> 个未在源数据中找到匹配项。
+            </p>
+            <table id="result-table">
+                <thead>
                     <tr>
-                        <td>${item.url}</td>
-                        <td>${item.clicks}</td>
-                    </tr>
-                `;
-            });
+        `;
 
-            tableHTML += '</tbody></table>';
-            outputDiv.innerHTML = tableHTML;
+        headers.forEach((header, index) => {
+            tableHTML += `<th><input type="checkbox" data-col-index="${index}" checked> ${header}</th>`;
+        });
+
+        tableHTML += `
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+
+        data.forEach(item => {
+            tableHTML += `<tr><td>${item.id}</td>`;
+            for (let i = 0; i < numDataCols; i++) {
+                // 如果当前行数据不足，用空字符串填充
+                const cellData = item.data[i] || ''; 
+                tableHTML += `<td>${cellData}</td>`;
+            }
+            tableHTML += `</tr>`;
+        });
+
+        tableHTML += '</tbody></table>';
+        outputDiv.innerHTML = tableHTML;
+    }
+
+    // 4. 选择性复制功能 (无需修改，可自动适应动态表格)
+    document.getElementById('copy-btn').addEventListener('click', () => {
+        const table = document.getElementById('result-table');
+        if (!table) return;
+        
+        const checkedHeaders = table.querySelectorAll('thead th input[type="checkbox"]:checked');
+        const selectedColumnIndices = Array.from(checkedHeaders).map(cb => parseInt(cb.dataset.colIndex));
+
+        if (selectedColumnIndices.length === 0) {
+            alert('请至少选择一列以便复制。');
+            return;
         }
 
-        document.getElementById('copy-btn').addEventListener('click', () => {
-            const table = document.getElementById('result-table');
-            if (!table) return;
+        let tsvContent = '';
+        const tableRows = table.querySelectorAll('tbody tr');
 
-            const clicksColumn = [];
-            for (let i = 1; i < table.rows.length; i++) {
-                const row = table.rows[i];
-                const clickCount = row.cells[1].innerText;
-                clicksColumn.push(clickCount);
-            }
-            
-            const clicksContent = clicksColumn.join('\n');
-
-            navigator.clipboard.writeText(clicksContent).then(() => {
-                const copyBtn = document.getElementById('copy-btn');
-                const originalText = copyBtn.innerText;
-                copyBtn.innerText = '复制成功!';
-                copyBtn.style.backgroundColor = '#218838';
-                setTimeout(() => {
-                    copyBtn.innerText = originalText;
-                    copyBtn.style.backgroundColor = '#28a745';
-                }, 2000);
-            }).catch(err => {
-                alert('复制失败: ' + err);
+        tableRows.forEach(row => {
+            const rowData = [];
+            selectedColumnIndices.forEach(index => {
+                rowData.push(row.cells[index].innerText);
             });
+            tsvContent += rowData.join('\t') + '\n';
         });
+        
+        navigator.clipboard.writeText(tsvContent.trim()).then(() => {
+            const copyBtn = document.getElementById('copy-btn');
+            const originalText = copyBtn.innerText;
+            copyBtn.innerText = '复制成功!';
+            copyBtn.style.backgroundColor = '#218838';
+            setTimeout(() => {
+                copyBtn.innerText = originalText;
+                copyBtn.style.backgroundColor = '#28a745';
+            }, 2000);
+        }).catch(err => {
+            alert('复制失败: ' + err);
+        });
+    });
     </script>
 
 </body>

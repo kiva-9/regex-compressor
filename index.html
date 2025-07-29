@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Web路径与数据处理工具集</title>
     <style>
-        /* CSS 样式 (无变化) */
+        /* CSS 样式 */
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
             line-height: 1.6;
@@ -113,6 +113,28 @@
             margin-top: 15px;
             color: #666;
         }
+        /* 为折叠面板添加样式 */
+        details {
+            margin-top: 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            padding: 10px 15px;
+        }
+        summary {
+            font-weight: bold;
+            cursor: pointer;
+            color: #1a73e8;
+        }
+        .converter-content {
+            margin-top: 15px;
+        }
+        .converter-content button {
+            background-color: #5e35b1;
+            margin-right: 10px;
+        }
+        .converter-content button:hover {
+            background-color: #4527a0;
+        }
     </style>
 </head>
 <body>
@@ -137,6 +159,17 @@
                 <h3>1. 粘贴URL列表1 (保持此顺序)</h3>
                 <p>URL或者URL Slug列表，用于匹配顺序，通常从您的文章数据表粘贴过来。</p>
                 <textarea id="list1" rows="12" placeholder="示例:&#10;https://example.com/page-1&#10;/page-1&#10;"></textarea>
+                
+                <details>
+                    <summary>需要将上方URL列表批量转为GA路径?</summary>
+                    <div class="converter-content">
+                        <p>这个可选功能会提取上方列表每个URL的路径，并用结果替换掉原有内容。</p>
+                        <button id="run-conversion-btn">① 转换路径</button>
+                        <button id="use-paths-btn">② 使用转换后的路径</button>
+                        <textarea id="converted-paths-output" rows="8" style="margin-top:10px;" placeholder="转换后的路径将显示在这里..." readonly></textarea>
+                    </div>
+                </details>
+
             </div>
             <div class="input-box">
                 <h3>2. 粘贴GSC/GA数据 (列表2)</h3>
@@ -157,7 +190,7 @@
     </div>
 
     <script>
-    // --- 脚本1: 正则表达式生成器 (无变化) ---
+    // --- 脚本1: 正则表达式生成器 ---
     function escapeRegex(str) {
       return str.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
     }
@@ -192,7 +225,7 @@
       }
     }
 
-    // --- 脚本2: 通用数据匹配工具 (已升级为动态列) ---
+    // --- 脚本2: 通用数据匹配工具 ---
     document.getElementById('process-btn').addEventListener('click', () => {
         const list1Text = document.getElementById('list1').value.trim();
         const list2Text = document.getElementById('list2').value.trim();
@@ -297,7 +330,7 @@
         outputDiv.innerHTML = tableHTML;
     }
 
-    // 4. 选择性复制功能 (无需修改，可自动适应动态表格)
+    // 4. 选择性复制功能
     document.getElementById('copy-btn').addEventListener('click', () => {
         const table = document.getElementById('result-table');
         if (!table) return;
@@ -333,6 +366,51 @@
         }).catch(err => {
             alert('复制失败: ' + err);
         });
+    });
+
+    // --- 工具二的内嵌URL转路径功能 ---
+    
+    // 1. "转换路径"按钮的逻辑
+    document.getElementById('run-conversion-btn').addEventListener('click', () => {
+        const urlInput = document.getElementById('list1').value.trim();
+        const pathOutput = document.getElementById('converted-paths-output');
+
+        if (!urlInput) {
+            pathOutput.value = '列表1中没有内容可转换。';
+            return;
+        }
+
+        const urls = urlInput.split('\n');
+        const paths = urls.map(line => {
+            const trimmedLine = line.trim();
+            if (!trimmedLine) return ''; // 保留空行
+            try {
+                // 如果已经是路径，直接返回
+                if (trimmedLine.startsWith('/')) {
+                    // 验证一下路径是否合法，防止注入奇怪的代码
+                    new URL(trimmedLine, 'http://dummybase.com');
+                    return trimmedLine;
+                }
+                const urlObject = new URL(trimmedLine);
+                return urlObject.pathname;
+            } catch (error) {
+                return '(无效URL或路径)';
+            }
+        });
+        
+        pathOutput.value = paths.join('\n');
+    });
+
+    // 2. "使用转换后的路径"按钮的逻辑
+    document.getElementById('use-paths-btn').addEventListener('click', () => {
+        const pathOutput = document.getElementById('converted-paths-output').value.trim();
+        if (pathOutput && !pathOutput.startsWith('列表1中没有内容可转换。')) {
+            // 将转换结果写回到上方的列表1输入框
+            document.getElementById('list1').value = pathOutput;
+            alert('路径已成功更新到列表1！');
+        } else {
+            alert('没有可用的路径来更新列表1。请先点击“转换路径”。');
+        }
     });
     </script>
 

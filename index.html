@@ -52,6 +52,8 @@
             word-break: break-all;
             border-radius: 4px;
             border: 1px solid #e0e0e0;
+            /* 新增：确保pre标签高度一致 */
+            min-height: 50px; 
         }
         button {
             padding: 12px 25px;
@@ -113,7 +115,6 @@
             margin-top: 15px;
             color: #666;
         }
-        /* 为折叠面板添加样式 */
         details {
             margin-top: 15px;
             border: 1px solid #e0e0e0;
@@ -135,6 +136,25 @@
         .converter-content button:hover {
             background-color: #4527a0;
         }
+        
+        /* --- 新增 CSS 样式 --- */
+        .output-container {
+            display: flex;
+            gap: 20px; /* 两个输出框之间的间距 */
+            margin-top: 15px;
+        }
+        .output-box {
+            flex: 1; /* 让两个输出框平分宽度 */
+        }
+        .output-box h4 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            color: #333;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        /* --- 新增样式结束 --- */
+
     </style>
 </head>
 <body>
@@ -148,9 +168,19 @@
         <div style="text-align: center;">
             <button id="regex-gen-btn" onclick="generateRegex()">生成正则表达式</button>
         </div>
-        <h3>生成的正则表达式</h3>
-        <pre id="regexOutput">(等待生成...)</pre>
-    </div>
+        
+        <h3>生成结果</h3>
+        <div class="output-container">
+            <div class="output-box">
+                <h4>适用于 Google Search Console (GSC)</h4>
+                <pre id="regexOutputGSC">(等待生成...)</pre>
+            </div>
+            <div class="output-box">
+                <h4>适用于 Google Analytics (GA)</h4>
+                <pre id="regexOutputGA">(等待生成...)</pre>
+            </div>
+        </div>
+        </div>
 
     <div class="container">
         <h2>工具二：URL数据匹配与导出工具</h2>
@@ -190,42 +220,66 @@
     </div>
 
     <script>
-    // --- 脚本1: 正则表达式生成器 ---
+    // --- 脚本1: 正则表达式生成器 (已更新) ---
     function escapeRegex(str) {
       return str.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
     }
+
     function generateRegex() {
-      const input = document.getElementById('urlInput').value.trim();
-      const urls = input.split('\n').map(line => line.trim()).filter(Boolean);
-      if (urls.length === 0) {
-        document.getElementById('regexOutput').textContent = '请输入至少一个 URL';
-        return;
-      }
-      try {
-        const urlObj = new URL(urls[0]);
-        const base = urlObj.origin;
-        const paths = urls.map(url => {
-          try {
-            const u = new URL(url);
-            if (u.origin !== base) {
-              console.warn(`URL ${url} 的域名与第一个URL不符，已忽略。`);
-              return null;
-            }
-            return escapeRegex(u.pathname.replace(/^\/|\/$/g, ''));
-          } catch (e) { return null; }
-        }).filter(Boolean);
-        if (paths.length === 0) {
-          document.getElementById('regexOutput').textContent = '未能提取到有效的路径。';
-          return;
+        const input = document.getElementById('urlInput').value.trim();
+        // 获取两个输出框的元素
+        const gscOutput = document.getElementById('regexOutputGSC');
+        const gaOutput = document.getElementById('regexOutputGA');
+
+        const urls = input.split('\n').map(line => line.trim()).filter(Boolean);
+        if (urls.length === 0) {
+            const msg = '请输入至少一个 URL';
+            gscOutput.textContent = msg;
+            gaOutput.textContent = msg;
+            return;
         }
-        const regex = `^${escapeRegex(base)}\/(${paths.join('|')})\/?$`;
-        document.getElementById('regexOutput').textContent = regex;
-      } catch (e) {
-        document.getElementById('regexOutput').textContent = '错误：请输入有效的URL。第一个URL格式不正确。';
-      }
+
+        try {
+            const urlObj = new URL(urls[0]);
+            const base = urlObj.origin;
+
+            const paths = urls.map(url => {
+                try {
+                    const u = new URL(url);
+                    if (u.origin !== base) {
+                        console.warn(`URL ${url} 的域名与第一个URL不符，已忽略。`);
+                        return null;
+                    }
+                    // 移除开头和结尾的斜杠，方便拼接
+                    return escapeRegex(u.pathname.replace(/^\/|\/$/g, ''));
+                } catch (e) { return null; }
+            }).filter(Boolean);
+
+            if (paths.length === 0) {
+                const msg = '未能提取到有效的路径。';
+                gscOutput.textContent = msg;
+                gaOutput.textContent = msg;
+                return;
+            }
+
+            // --- 逻辑更新：同时生成两种正则表达式 ---
+
+            // 1. 生成 GSC 正则表达式 (包含域名)
+            const regexGSC = `^${escapeRegex(base)}\/(${paths.join('|')})\/?$`;
+            gscOutput.textContent = regexGSC;
+
+            // 2. 生成 GA 正则表达式 (仅路径)
+            const regexGA = `^\/(${paths.join('|')})\/?$`;
+            gaOutput.textContent = regexGA;
+
+        } catch (e) {
+            const msg = '错误：请输入有效的URL。第一个URL格式不正确。';
+            gscOutput.textContent = msg;
+            gaOutput.textContent = msg;
+        }
     }
 
-    // --- 脚本2: 通用数据匹配工具 ---
+    // --- 脚本2: 通用数据匹配工具 (无改动) ---
     document.getElementById('process-btn').addEventListener('click', () => {
         const list1Text = document.getElementById('list1').value.trim();
         const list2Text = document.getElementById('list2').value.trim();
@@ -234,29 +288,22 @@
             document.getElementById('output').innerHTML = '<p class="status-message" style="color: red;">错误：两个列表都必须填写内容。</p>';
             return;
         }
-
-        // 1. 解析列表2，创建 ID 到数据数组的映射
+        
         const dataMap = new Map();
         const list2Lines = list2Text.split('\n');
-        let maxCols = 0; // 用于记录数据部分的最大列数
+        let maxCols = 0;
         
         list2Lines.forEach(line => {
             if (line.trim() === '') return;
-            // 严格使用制表符(Tab)进行分割
             const parts = line.split('\t').map(p => p.trim());
-            
-            if (parts.length === 0 || !parts[0]) return; // 跳过空行或无效行
-
-            const identifier = parts.shift(); // 取出第一项作为ID
-            dataMap.set(identifier, parts); // 剩下的部分作为数据数组存入Map
-            
-            // 更新最大列数
+            if (parts.length === 0 || !parts[0]) return;
+            const identifier = parts.shift();
+            dataMap.set(identifier, parts);
             if (parts.length > maxCols) {
                 maxCols = parts.length;
             }
         });
 
-        // 2. 解析列表1，并根据映射查找数据
         const results = [];
         let notFoundCount = 0;
         const list1Lines = list1Text.split('\n');
@@ -269,12 +316,11 @@
                     results.push({ id: identifier, data: dataArray });
                 } else {
                     notFoundCount++;
-                    results.push({ id: identifier, data: [] }); // 未找到时，数据为空数组
+                    results.push({ id: identifier, data: [] });
                 }
             }
         });
 
-        // 3. 生成并显示动态列数的表格
         renderTable(results, notFoundCount, maxCols);
         
         if (results.length > 0) {
@@ -291,7 +337,6 @@
             return;
         }
 
-        // 动态生成表头
         const headers = ['项目/ID'];
         for (let i = 1; i <= numDataCols; i++) {
             headers.push(`数据列 ${i}`);
@@ -319,7 +364,6 @@
         data.forEach(item => {
             tableHTML += `<tr><td>${item.id}</td>`;
             for (let i = 0; i < numDataCols; i++) {
-                // 如果当前行数据不足，用空字符串填充
                 const cellData = item.data[i] || ''; 
                 tableHTML += `<td>${cellData}</td>`;
             }
@@ -330,7 +374,6 @@
         outputDiv.innerHTML = tableHTML;
     }
 
-    // 4. 选择性复制功能
     document.getElementById('copy-btn').addEventListener('click', () => {
         const table = document.getElementById('result-table');
         if (!table) return;
@@ -368,9 +411,7 @@
         });
     });
 
-    // --- 工具二的内嵌URL转路径功能 ---
-    
-    // 1. "转换路径"按钮的逻辑
+    // --- 工具二的内嵌URL转路径功能 (无改动) ---
     document.getElementById('run-conversion-btn').addEventListener('click', () => {
         const urlInput = document.getElementById('list1').value.trim();
         const pathOutput = document.getElementById('converted-paths-output');
@@ -383,11 +424,9 @@
         const urls = urlInput.split('\n');
         const paths = urls.map(line => {
             const trimmedLine = line.trim();
-            if (!trimmedLine) return ''; // 保留空行
+            if (!trimmedLine) return '';
             try {
-                // 如果已经是路径，直接返回
                 if (trimmedLine.startsWith('/')) {
-                    // 验证一下路径是否合法，防止注入奇怪的代码
                     new URL(trimmedLine, 'http://dummybase.com');
                     return trimmedLine;
                 }
@@ -401,11 +440,9 @@
         pathOutput.value = paths.join('\n');
     });
 
-    // 2. "使用转换后的路径"按钮的逻辑
     document.getElementById('use-paths-btn').addEventListener('click', () => {
         const pathOutput = document.getElementById('converted-paths-output').value.trim();
         if (pathOutput && !pathOutput.startsWith('列表1中没有内容可转换。')) {
-            // 将转换结果写回到上方的列表1输入框
             document.getElementById('list1').value = pathOutput;
             alert('路径已成功更新到列表1！');
         } else {

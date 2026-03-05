@@ -460,6 +460,39 @@
             grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
         }
 
+        .regex-result-card {
+            position: relative;
+        }
+
+        .regex-copy-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 28px;
+            height: 28px;
+            padding: 0;
+            border-radius: 8px;
+            font-size: 0.88rem;
+            line-height: 1;
+            background: var(--surface-card);
+            border: 1px solid var(--border-soft);
+            box-shadow: none;
+        }
+
+        .match-log {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-top: 16px;
+            flex-wrap: wrap;
+        }
+
+        .match-log .feedback {
+            margin-top: 0;
+            flex: 1 1 420px;
+        }
+
         pre {
             background: var(--code-bg);
             border: 1px solid var(--code-border);
@@ -680,12 +713,14 @@
 
         <h3>生成结果</h3>
         <div class="output-columns">
-            <div>
+            <div class="regex-result-card">
                 <h4>适用于 Google Search Console</h4>
+                <button class="regex-copy-btn" type="button" data-target="regexOutputGSC" aria-label="复制 GSC 正则" title="复制 GSC 正则">⧉</button>
                 <pre id="regexOutputGSC" class="placeholder">等待生成...</pre>
             </div>
-            <div>
+            <div class="regex-result-card">
                 <h4>适用于 Google Analytics</h4>
+                <button class="regex-copy-btn" type="button" data-target="regexOutputGA" aria-label="复制 GA 正则" title="复制 GA 正则">⧉</button>
                 <pre id="regexOutputGA" class="placeholder">等待生成...</pre>
             </div>
         </div>
@@ -732,12 +767,14 @@
             </div>
         </div>
 
-        <div class="action-area" style="justify-content: space-between; align-items:center;">
+        <div class="action-area" style="justify-content: flex-start;">
             <button id="process-btn" class="primary" type="button">开始匹配</button>
-            <button id="copy-btn" class="secondary" type="button" disabled>复制所选列 (TSV)</button>
         </div>
 
-        <div id="tableFeedback" class="feedback" hidden></div>
+        <div class="match-log">
+            <div id="tableFeedback" class="feedback" hidden></div>
+            <button id="copy-btn" class="secondary" type="button" disabled>复制所选列 (TSV)</button>
+        </div>
 
         <div class="result-container" style="margin-top:28px;">
             <h3>3. 匹配结果</h3>
@@ -893,6 +930,11 @@
         document.getElementById('copy-btn').addEventListener('click', copySelectedColumns);
         document.getElementById('run-conversion-btn').addEventListener('click', runPathConversion);
         document.getElementById('use-paths-btn').addEventListener('click', applyConvertedPaths);
+        document.querySelectorAll('.regex-copy-btn').forEach(button => {
+            button.addEventListener('click', () => {
+                copyRegexOutput(button.dataset.target);
+            });
+        });
     });
 
     function escapeRegex(str) {
@@ -940,14 +982,15 @@
                     mismatched.push(url);
                     return null;
                 }
-                return escapeRegex(parsed.pathname.replace(/^\/+|\/+$/g, ''));
+                return parsed.pathname;
             } catch (err) {
                 invalid.push(url);
                 return null;
             }
         }).filter(Boolean);
+        const uniquePaths = Array.from(new Set(paths));
 
-        if (paths.length === 0) {
+        if (uniquePaths.length === 0) {
             const msg = '未能提取到有效路径，请检查 URL 是否有效且属于同一域名。';
             setFeedback(feedback, msg, 'error');
             gscOutput.textContent = msg;
@@ -957,14 +1000,13 @@
             return;
         }
 
-        const regexGSC = `^${escapeRegex(base)}\/(${paths.join('|')})\/?$`;
-        const regexGA = `^\/(${paths.join('|')})\/?$`;
+        const { gsc: regexGSC, ga: regexGA } = buildRegexPair(base, uniquePaths);
         gscOutput.textContent = regexGSC;
         gaOutput.textContent = regexGA;
         gscOutput.classList.remove('placeholder');
         gaOutput.classList.remove('placeholder');
 
-        const summary = [`已成功生成 ${paths.length} 个路径的正则表达式。`];
+        const summary = [`已成功生成 ${uniquePaths.length} 个路径的正则表达式。`];
         if (mismatched.length > 0) {
             summary.push(`<div>⚠️ 忽略了 ${mismatched.length} 个域名不同的 URL：<br><code>${mismatched.join('<br>')}</code></div>`);
         }
@@ -978,6 +1020,105 @@
         if (line.includes('\t')) return '\t';
         if (line.includes(',')) return ',';
         return null;
+    }
+
+    function isLikelyIdentifier(value) {
+        if (!value) return false;
+        const trimmed = value.trim();
+        if (!trimmed) return false;
+        if (trimmed.startsWith('/')) return true;
+        try {
+            const parsed = new URL(trimmed);
+            return Boolean(parsed.protocol && parsed.host);
+        } catch (err) {
+            return false;
+        }
+    }
+
+    function buildPathPattern(pathnames) {
+        const trieRoot = { end: false, children: new Map() };
+
+        pathnames.forEach(pathname => {
+            const segments = pathname.split('/').filter(Boolean).map(segment => escapeRegex(segment));
+            if (segments.length === 0) {
+                trieRoot.end = true;
+                return;
+            }
+            let node = trieRoot;
+            segments.forEach(segment => {
+                if (!node.children.has(segment)) {
+                    node.children.set(segment, { end: false, children: new Map() });
+                }
+                node = node.children.get(segment);
+            });
+            node.end = true;
+        });
+
+        const nodeToPattern = (node) => {
+            const options = [];
+            if (node.end) options.push('');
+
+            node.children.forEach((childNode, segment) => {
+                const childPattern = nodeToPattern(childNode);
+                options.push(childPattern ? `${segment}/${childPattern}` : segment);
+            });
+
+            if (options.length === 0) return '';
+            const nonEmpty = options.filter(Boolean);
+            const hasEmpty = options.length !== nonEmpty.length;
+
+            if (!hasEmpty) {
+                if (nonEmpty.length === 1) return nonEmpty[0];
+                return `(?:${nonEmpty.join('|')})`;
+            }
+
+            if (nonEmpty.length === 0) return '';
+            if (nonEmpty.length === 1) return `(?:${nonEmpty[0]})?`;
+            return `(?:${nonEmpty.join('|')})?`;
+        };
+
+        return {
+            hasRoot: trieRoot.end,
+            nestedPattern: nodeToPattern(trieRoot)
+        };
+    }
+
+    function buildRegexPair(baseOrigin, pathnames) {
+        const { hasRoot, nestedPattern } = buildPathPattern(pathnames);
+
+        if (hasRoot && !nestedPattern) {
+            return {
+                gsc: `^${escapeRegex(baseOrigin)}\\/?$`,
+                ga: '^\\/?$'
+            };
+        }
+
+        if (hasRoot) {
+            return {
+                gsc: `^${escapeRegex(baseOrigin)}(?:\\/${nestedPattern}\\/?)?$`,
+                ga: `^(?:\\/${nestedPattern}\\/?)?$`
+            };
+        }
+
+        return {
+            gsc: `^${escapeRegex(baseOrigin)}\\/${nestedPattern}\\/?$`,
+            ga: `^\\/${nestedPattern}\\/?$`
+        };
+    }
+
+    function copyRegexOutput(targetId) {
+        const output = document.getElementById(targetId);
+        if (!output) return;
+        const text = output.textContent.trim();
+        if (!text || text === '等待生成...') {
+            showNotification('请先生成正则表达式。', 'warning');
+            return;
+        }
+        navigator.clipboard.writeText(text).then(() => {
+            showNotification('正则表达式已复制。', 'success');
+        }).catch(err => {
+            showNotification('复制失败：' + err, 'error');
+        });
     }
 
     function processLists() {
@@ -1006,6 +1147,8 @@
             }
         }
 
+        const parsedRows = [];
+
         list2Lines.forEach(line => {
             if (line.trim() === '') return;
             const parts = delimiter === ',' ? line.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/) : line.split('\t');
@@ -1015,11 +1158,29 @@
                 return;
             }
             const identifier = cleaned.shift();
-            dataMap.set(identifier, cleaned);
-            if (cleaned.length > maxCols) {
-                maxCols = cleaned.length;
+            parsedRows.push({ identifier, data: cleaned });
+        });
+
+        let idHeader = '项目 / ID';
+        let dataHeaders = [];
+        if (parsedRows.length > 0 && !isLikelyIdentifier(parsedRows[0].identifier)) {
+            idHeader = parsedRows[0].identifier || idHeader;
+            dataHeaders = parsedRows[0].data;
+            parsedRows.shift();
+        }
+
+        parsedRows.forEach(row => {
+            dataMap.set(row.identifier, row.data);
+            if (row.data.length > maxCols) {
+                maxCols = row.data.length;
             }
         });
+
+        if (dataHeaders.length < maxCols) {
+            for (let i = dataHeaders.length; i < maxCols; i++) {
+                dataHeaders.push(`数据列 ${i + 1}`);
+            }
+        }
 
         const results = [];
         let notFoundCount = 0;
@@ -1053,19 +1214,20 @@
         }
 
         setFeedback(feedback, tableInfo.join(' · '), notFoundCount > 0 || skipped.length > 0 ? 'warning' : 'success');
-        renderTable(results, notFoundCount, maxCols);
+        renderTable(results, notFoundCount, maxCols, { idHeader, dataHeaders });
     }
 
-    function renderTable(data, notFoundCount, numDataCols) {
+    function renderTable(data, notFoundCount, numDataCols, headersMeta = {}) {
         const outputDiv = document.getElementById('output');
         if (data.length === 0) {
             outputDiv.innerHTML = '<p class="placeholder">未能处理任何数据，请检查输入格式。</p>';
             return;
         }
 
-        const headers = ['项目 / ID'];
+        const headers = [headersMeta.idHeader || '项目 / ID'];
         for (let i = 1; i <= numDataCols; i++) {
-            headers.push(`数据列 ${i}`);
+            const headerLabel = headersMeta.dataHeaders && headersMeta.dataHeaders[i - 1];
+            headers.push(headerLabel || `数据列 ${i}`);
         }
 
         let tableHTML = `
